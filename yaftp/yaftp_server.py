@@ -2,8 +2,11 @@ import threading
 from socket import socket, AF_INET, SOCK_STREAM
 
 def handle_control_connection(client_socket, addr):
+    print('connected by: {}'.format(addr))
     while True:
         data = client_socket.recv(1024)
+        if not data:
+            break
         client_socket.sendall(data)
 
 class YAFTPServer:
@@ -16,10 +19,7 @@ class YAFTPServer:
         with socket(AF_INET, SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen()
-            c, addr = s.accept()
-            print('connected by: {}'.format(addr))
             while True:
-                data = c.recv(1024)
-                if not data:
-                    break
-                c.sendall(data)
+                c, addr = s.accept()
+                t = threading.Thread(target=handle_control_connection, args=(c, addr))
+                t.start()
