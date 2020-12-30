@@ -7,3 +7,4 @@ class YAFTP:
     def hello(self):
         print("Hello!")
         helpers.help()
+        return 0
