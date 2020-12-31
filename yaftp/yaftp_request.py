@@ -89,8 +89,9 @@ class YAFTPRequestParser:
 
     def from_string(self, request_string: str) -> YAFTPRequest:
         s = request_string.split()
-        if len(s) >= 1 and s[0] in REQUESTS.keys():
-            request_type = REQUESTS[s[0]]
+        case_insensitive_command = s[0].upper()
+        if len(s) >= 1 and case_insensitive_command in REQUESTS.keys():
+            request_type = REQUESTS[case_insensitive_command]
             return request_type(s[1:])
         else:
             raise ParseRequestError(request_string)
