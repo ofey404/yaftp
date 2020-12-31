@@ -8,7 +8,7 @@ import threading
 import socket
 
 class YAFTPRequest:
-    def __init__(self, name, raw_args=None, accepted_argc=(0,)):
+    def __init__(self, name, raw_args=(), accepted_argc=(0,)):
         self.name = name
         self.raw_args = raw_args
         if len(raw_args) not in accepted_argc:
@@ -55,7 +55,7 @@ class YAFTPRequest:
         return " ".join(l)
 
 class YAFTPLogin(YAFTPRequest):
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("LOGIN", raw_args, accepted_argc=(1,))
         self.username = None
         self.passwd = None
@@ -78,7 +78,7 @@ class YAFTPLogin(YAFTPRequest):
         return UserLoggedIn()
 
 class YAFTPDir(YAFTPRequest):
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("DIR", raw_args, accepted_argc=(0, 1))
         self.dir = "."
         if len(raw_args) != 0:
@@ -96,7 +96,7 @@ class YAFTPDir(YAFTPRequest):
         return DirectoryStatus(dir_status="\n".join(dirs + filenames))
 
 class YAFTPPwd(YAFTPRequest):
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("PWD", raw_args, accepted_argc=(0,))
 
     async def execute(self, session: YAFTPSession) -> YAFTPResponse:
@@ -107,7 +107,7 @@ class YAFTPPwd(YAFTPRequest):
 
 class YAFTPCd(YAFTPRequest):
     """Only support relative path"""
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("CD", raw_args, accepted_argc=(0, 1))
         self.relative_path = "."
         if len(raw_args) == 1:
@@ -125,7 +125,7 @@ class YAFTPCd(YAFTPRequest):
 
 class YAFTPGet(YAFTPRequest):
     """Active Mode Only"""
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("GET", raw_args, accepted_argc=(2,))
         self.filename = raw_args[0]
         self.client_hostname = None
@@ -169,7 +169,7 @@ class YAFTPGet(YAFTPRequest):
         return FileStatus(f"try sending file {self.filename} to {self.client_hostname}:{self.client_dataport}")
 
 class YAFTPSend(YAFTPRequest):
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("SEND", raw_args, accepted_argc=(2,))
         self.filename = raw_args[0]
         self.client_hostname = None
@@ -210,7 +210,7 @@ class YAFTPSend(YAFTPRequest):
         return FileStatus(f"try receiving file {self.filename} from {self.client_hostname}:{self.client_dataport}")
 
 class YAFTPBye(YAFTPRequest):
-    def __init__(self, raw_args=None):
+    def __init__(self, raw_args=()):
         super().__init__("BYE", raw_args, accepted_argc=(0,))
 
     async def execute(self, session: YAFTPSession) -> YAFTPResponse:
