@@ -7,7 +7,7 @@ import os
 class YAFTPRequest:
     def __init__(self, name, raw_args=None, accepted_argc=(0,)):
         self.name = name
-        self.raw_args = []
+        self.raw_args = raw_args
         if len(raw_args) not in accepted_argc:
             raise ParseRequestError(f"wrong argument number: {len(raw_args)}")
 
@@ -33,6 +33,19 @@ class YAFTPRequest:
             if string.startswith(prefix):
                 return string[len(prefix):]
         return "/" + remove_prefix(local_path, root)
+
+    def check_login_and_log(self, session: YAFTPSession):
+        if not session.login:
+            logging.info(f"try `{self}` without login")
+            return False
+        else:
+            logging.info(f"execute `{self}` on {self.to_local_path(session, session.work_dir)}")
+            return True
+
+    def __str__(self):
+        l = [self.name]
+        l.extend(self.raw_args)
+        return " ".join(l)
 
 class YAFTPLogin(YAFTPRequest):
     def __init__(self, raw_args=None):
@@ -65,14 +78,12 @@ class YAFTPDir(YAFTPRequest):
             self.dir = raw_args[0]
     
     def execute(self, session: YAFTPSession) -> YAFTPResponse:
-        if not session.login:
-            logging.info(f"try {self.name} without login")
+        if not self.check_login_and_log(session):
             return NotLoggedIn()
         try:
             path = self.to_local_path(session, self.dir)
         except PathOverRootError:
             return FileUnAvailable(self.dir)
-        logging.info(f"execute {self.name} on {path}")
         _, dirs, filenames = next(os.walk(path))
         dirs = list(map(lambda x: x + "/", dirs))
         return DirectoryStatus(dir_status="\n".join(dirs + filenames))
@@ -82,8 +93,7 @@ class YAFTPPwd(YAFTPRequest):
         super().__init__("PWD", raw_args, accepted_argc=(0,))
 
     def execute(self, session: YAFTPSession) -> YAFTPResponse:
-        if not session.login:
-            logging.info(f"try {self.name} without login")
+        if not self.check_login_and_log(session):
             return NotLoggedIn()
         path = self.to_virtual_path(session)
         return DirectoryStatus(dir_status=path)
