@@ -1,4 +1,4 @@
-.PHONY: init test test-hand-server test-hand-terminal
+.PHONY: init test test-hand-server test-hand-terminal test-hand-recevefile test-hand-sendfile
 
 init:
 	pip install -e .
@@ -11,3 +11,9 @@ test-hand-server:
 	
 test-hand-terminal:
 	python tests/hand_run_tests/terminal.py
+
+test-hand-recevefile:
+	python tests/hand_run_tests/recevefile.py
+
+test-hand-sendfile:
+	python tests/hand_run_tests/sendfile.py
