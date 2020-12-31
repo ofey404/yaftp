@@ -52,7 +52,7 @@ c.login()
 # Out[2]: 230
 
 c.dir()
-# Out[3]: ['test_folder/', 'hello.txt', 'hey.txt']
+# Out[3]: ['test_folder/', 'hello.txt']
 
 c.get(name="hello.txt", savepath="saved_file")
 # Out[4]: 213
