@@ -30,3 +30,18 @@ client: randomly choose a port for data and control connection.
 
 Do I need to interact with GIL?
 - GIL involves CPU-intensive programs. Network IO is not one of them.
+
+## protocol implementation
+Support single parameter first.
+
+Request: {COMMAND} {PARAMETER}
+- LOGIN {USER}
+    - LOGIN {USER}:{PASSWORD}
+- DIR {DIR}
+- PWD
+- GET {FILENAME}
+- SEND {FILENAME}
+- BYE
+
+Response: {CODE}: {STRING}
+

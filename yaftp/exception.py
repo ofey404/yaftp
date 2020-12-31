@@ -8,3 +8,13 @@ class YAFTPBaseError(Exception):
 
 class LoginFailedError(YAFTPBaseError):
     pass
+
+class ParseRequestError(YAFTPBaseError):
+    def __init__(self, message=None):
+        self.message = message
+
+    def __str__(self):
+        if self.message != None:
+            return f"Can't parse request: {self.message}"
+        else:
+            return "Can't parse request."

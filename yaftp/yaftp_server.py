@@ -1,15 +1,20 @@
 import logging
 import socket
 import asyncio
+from .yaftp_request import YAFTPRequestParser
+from .yaftp_response import YAFTPResponse
+from .yaftp_session import YAFTPSession
+from .exception import ParseRequestError
 
 class YAFTPServer:
-    def __init__(self, address: (str, int) = ("127.0.0.1", 2121), local_dir='.'):
+    def __init__(self, address: (str, int) = ("127.0.0.1", 2121), local_dir='.', auth={"OFEY": "404"}):
         self.host = address[0]
         self.port = address[1]
         self.local_dir = local_dir
-        logging.basicConfig(format='%(process)d - [%(levelname)s] - %(asctime)s - %(message)s', datefmt='%y-%m-%d %H:%M:%S', level=logging.INFO)
+        logging.basicConfig(format='%(process)d - [%(levelname)s] - %(asctime)s - %(message)s', datefmt='%y-%m-%d %H:%M:%S', level=logging.DEBUG)
         self.loop = asyncio.get_event_loop()
         self.server = None
+        self.auth = auth
 
     def serve(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -17,9 +22,9 @@ class YAFTPServer:
         self.server.bind((self.host, self.port))
         self.server.listen(8)
         self.server.setblocking(False)
-        self.loop.run_until_complete(self.run_server())
+        self.loop.run_until_complete(self.server_loop())
 
-    async def run_server(self):
+    async def server_loop(self):
         if self.server == None:
             return
         while True:
@@ -28,11 +33,17 @@ class YAFTPServer:
             self.loop.create_task(self.handler(client, address))
 
     async def handler(self, client_socket, address):
+        logging.debug(f'start handling, client: {client_socket}')
+        session = YAFTPSession(self.local_dir, self.auth)
         while True:
-            data = (await self.loop.sock_recv(client_socket, 1024)).decode('utf8')
-            if not data:
+            request_string = (await self.loop.sock_recv(client_socket, 1024)).decode()
+            if not request_string:
+                logging.debug(f'no more requests')
                 break
-            await self.loop.sock_sendall(client_socket, data.encode('utf8'))
+            request = YAFTPRequestParser().parse(request_string)
+            response = request.execute(session)  # TODO: await this
+            await self.loop.sock_sendall(client_socket, str(response).encode())
+
 
     def close_all(self):
         self.server.close()
