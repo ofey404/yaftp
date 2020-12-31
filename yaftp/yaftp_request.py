@@ -32,7 +32,11 @@ class YAFTPRequest:
         def remove_prefix(string, prefix):
             if string.startswith(prefix):
                 return string[len(prefix):]
-        return "/" + remove_prefix(local_path, root)
+        removed = remove_prefix(local_path, root)
+        if removed == "":   # FIXIT: a corner case. Refactor the path management part to clarify this
+            return "/"
+        else:
+            return os.path.normpath(removed)
 
     def check_login_and_log(self, session: YAFTPSession):
         if not session.login:
@@ -99,8 +103,22 @@ class YAFTPPwd(YAFTPRequest):
         return DirectoryStatus(dir_status=path)
 
 class YAFTPCd(YAFTPRequest):
+    """Only support relative path"""
     def __init__(self, raw_args=None):
-        super().__init__("CD", raw_args)
+        super().__init__("CD", raw_args, accepted_argc=(0, 1))
+        self.relative_path = "."
+        if len(raw_args) == 1:
+            self.relative_path = raw_args[0]
+
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+        if not self.check_login_and_log(session):
+            return NotLoggedIn()
+        new_path = os.path.normpath(os.path.join(session.work_dir, self.relative_path))
+        session.work_dir = new_path
+        try:
+            return DirectoryStatus(self.to_virtual_path(session))
+        except PathOverRootError:
+            return FileUnAvailable(self.relative_path)
 
 class YAFTPGet(YAFTPRequest):
     def __init__(self, raw_args=None):
