@@ -7,3 +7,4 @@ class YAFTPSession:
         self.root_dir = root_dir
         self.work_dir = "."
         self.auth = authenticator
+        self.ended = False

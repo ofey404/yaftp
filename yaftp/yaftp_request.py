@@ -1,6 +1,6 @@
 from .exception import ParseRequestError, PathOverRootError
 from .yaftp_session import YAFTPSession
-from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus, FileUnAvailable
+from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus, FileUnAvailable, UserLoggedOut
 import logging
 import os
 
@@ -130,7 +130,13 @@ class YAFTPSend(YAFTPRequest):
 
 class YAFTPBye(YAFTPRequest):
     def __init__(self, raw_args=None):
-        super().__init__("BYE", raw_args)
+        super().__init__("BYE", raw_args, accepted_argc=(0,))
+
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+        if not self.check_login_and_log(session):
+            return NotLoggedIn()
+        session.ended = True
+        return UserLoggedOut
 
 REQUESTS = {
     "LOGIN": YAFTPLogin,

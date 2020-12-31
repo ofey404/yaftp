@@ -35,7 +35,7 @@ class YAFTPServer:
     async def handler(self, client_socket, address):
         logging.debug(f'start handling, client: {client_socket}')
         session = YAFTPSession(self.local_dir, self.auth)
-        while True:
+        while not session.ended:
             request_string = (await self.loop.sock_recv(client_socket, 1024)).decode()
             if not request_string:
                 logging.debug(f'no more requests')
@@ -46,6 +46,7 @@ class YAFTPServer:
             except ParseRequestError:
                 response = InvalidCommandOrArguments()
             await self.loop.sock_sendall(client_socket, str(response).encode())
+        logging.debug(f'end handling, client: {client_socket}')
 
 
     def close_all(self):

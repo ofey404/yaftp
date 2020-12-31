@@ -15,6 +15,10 @@ class UserLoggedIn(YAFTPResponse):
     def __init__(self):
         super().__init__(230, "User logged in, proceed. Logged out if appropriate.")
 
+class UserLoggedOut(YAFTPResponse):
+    def __init__(self):
+        super().__init__(231, "User logged out; service terminated.")
+
 class InvalidUserNameOrPassword(YAFTPResponse):
     def __init__(self):
         super().__init__(430, "Invalid username or password.")
@@ -34,6 +38,7 @@ class NotLoggedIn(YAFTPResponse):
 CODE_TO_RESPONSES = {
     212: DirectoryStatus,
     230: UserLoggedIn,
+    231: UserLoggedOut,
     430: InvalidUserNameOrPassword,
     453: FileUnAvailable,
     501: InvalidCommandOrArguments,
