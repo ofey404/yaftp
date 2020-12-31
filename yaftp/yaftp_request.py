@@ -1,6 +1,6 @@
-from .exception import ParseRequestError
+from .exception import ParseRequestError, PathOverRootError
 from .yaftp_session import YAFTPSession
-from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus
+from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus, FileUnAvailable
 import logging
 import os
 
@@ -13,6 +13,26 @@ class YAFTPRequest:
 
     def execute(self, session: YAFTPSession) -> YAFTPResponse:
         raise NotImplementedError
+
+    def to_local_path(self, session: YAFTPSession, d: str = ".") -> str:
+        def is_subpath(root, sub):
+            root = os.path.abspath(root)
+            sub = os.path.abspath(sub)
+            return sub.startswith(root)
+            
+        path = os.path.join(session.root_dir, session.work_dir, d)
+        if is_subpath(session.root_dir, path):
+            return os.path.normpath(path)
+        else:
+            raise PathOverRootError(path)
+
+    def to_virtual_path(self, session: YAFTPSession, d: str = ".") -> str:
+        root = os.path.abspath(session.root_dir)
+        local_path = os.path.abspath(self.to_local_path(session, d))  # have checked - is subpath of root path
+        def remove_prefix(string, prefix):
+            if string.startswith(prefix):
+                return string[len(prefix):]
+        return "/" + remove_prefix(local_path, root)
 
 class YAFTPLogin(YAFTPRequest):
     def __init__(self, raw_args=None):
@@ -48,7 +68,10 @@ class YAFTPDir(YAFTPRequest):
         if not session.login:
             logging.info(f"try {self.name} without login")
             return NotLoggedIn()
-        path = os.path.join(session.root_dir, session.work_dir, self.dir)
+        try:
+            path = self.to_local_path(session, self.dir)
+        except PathOverRootError:
+            return FileUnAvailable(self.dir)
         logging.info(f"execute {self.name} on {path}")
         _, dirs, filenames = next(os.walk(path))
         dirs = list(map(lambda x: x + "/", dirs))
@@ -56,7 +79,18 @@ class YAFTPDir(YAFTPRequest):
 
 class YAFTPPwd(YAFTPRequest):
     def __init__(self, raw_args=None):
-        super().__init__("PWD", raw_args)
+        super().__init__("PWD", raw_args, accepted_argc=(0,))
+
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+        if not session.login:
+            logging.info(f"try {self.name} without login")
+            return NotLoggedIn()
+        path = self.to_virtual_path(session)
+        return DirectoryStatus(dir_status=path)
+
+class YAFTPCd(YAFTPRequest):
+    def __init__(self, raw_args=None):
+        super().__init__("CD", raw_args)
 
 class YAFTPGet(YAFTPRequest):
     def __init__(self, raw_args=None):
@@ -74,6 +108,7 @@ REQUESTS = {
     "LOGIN": YAFTPLogin,
     "DIR": YAFTPDir,
     "PWD": YAFTPPwd,
+    "CD": YAFTPCd,
     "GET": YAFTPGet,
     "SEND": YAFTPSend,
     "BYE": YAFTPBye

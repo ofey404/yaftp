@@ -1,4 +1,3 @@
-
 class YAFTPBaseError(Exception):
     def __init__(self):
         pass
@@ -18,3 +17,13 @@ class ParseRequestError(YAFTPBaseError):
             return f"Can't parse request: {self.message}"
         else:
             return "Can't parse request."
+
+class PathOverRootError(YAFTPBaseError):
+    def __init__(self, message=None):
+        self.message = message
+
+    def __str__(self):
+        if self.message != None:
+            return f"Path over root: {self.message}"
+        else:
+            return "Path over root."

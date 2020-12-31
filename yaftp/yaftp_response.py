@@ -19,6 +19,10 @@ class InvalidUserNameOrPassword(YAFTPResponse):
     def __init__(self):
         super().__init__(430, "Invalid username or password.")
 
+class FileUnAvailable(YAFTPResponse):
+    def __init__(self, path=""):
+        super().__init__(453, f"Requested action not taken. {path} unavailable (e.g., file not found, no access).")
+
 class InvalidCommandOrArguments(YAFTPResponse):
     def __init__(self):
         super().__init__(501, "Syntax error in command or arguments.")
@@ -31,6 +35,7 @@ CODE_TO_RESPONSES = {
     212: DirectoryStatus,
     230: UserLoggedIn,
     430: InvalidUserNameOrPassword,
+    453: FileUnAvailable,
     501: InvalidCommandOrArguments,
     530: NotLoggedIn
 }
