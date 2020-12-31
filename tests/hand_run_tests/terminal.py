@@ -9,4 +9,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         i = input("> ")
         s.sendall(bytes(i, 'utf-8'))
         data = s.recv(1024)
-        print(data)
+        print(data.decode())

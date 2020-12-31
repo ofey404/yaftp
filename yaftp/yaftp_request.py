@@ -1,7 +1,8 @@
 from .exception import ParseRequestError
 from .yaftp_session import YAFTPSession
-from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn
+from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus
 import logging
+import os
 
 class YAFTPRequest:
     def __init__(self, name, raw_args=None, accepted_argc=(0,)):
@@ -38,7 +39,20 @@ class YAFTPLogin(YAFTPRequest):
 
 class YAFTPDir(YAFTPRequest):
     def __init__(self, raw_args=None):
-        super().__init__("DIR", raw_args)
+        super().__init__("DIR", raw_args, accepted_argc=(0, 1))
+        self.dir = "."
+        if len(raw_args) != 0:
+            self.dir = raw_args[0]
+    
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+        if not session.login:
+            logging.info(f"try {self.name} without login")
+            return NotLoggedIn()
+        path = os.path.join(session.root_dir, session.work_dir, self.dir)
+        logging.info(f"execute {self.name} on {path}")
+        _, dirs, filenames = next(os.walk(path))
+        dirs = list(map(lambda x: x + "/", dirs))
+        return DirectoryStatus(dir_status="\n".join(dirs + filenames))
 
 class YAFTPPwd(YAFTPRequest):
     def __init__(self, raw_args=None):

@@ -1,3 +1,3 @@
 import yaftp
 
-yaftp.YAFTPServer(local_dir="../data").serve()
+yaftp.YAFTPServer(local_dir="tests/data").serve()

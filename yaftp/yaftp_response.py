@@ -6,6 +6,11 @@ class YAFTPResponse:
     def __str__(self):
         return f"{self.code}: {self.description}"
 
+class DirectoryStatus(YAFTPResponse):
+    def __init__(self, dir_status=""):
+        super().__init__(212, "Directory status:\n")
+        self.description += dir_status
+
 class UserLoggedIn(YAFTPResponse):
     def __init__(self):
         super().__init__(230, "User logged in, proceed. Logged out if appropriate.")
@@ -14,9 +19,20 @@ class InvalidUserNameOrPassword(YAFTPResponse):
     def __init__(self):
         super().__init__(430, "Invalid username or password.")
 
+class InvalidCommandOrArguments(YAFTPResponse):
+    def __init__(self):
+        super().__init__(501, "Syntax error in command or arguments.")
+
+class NotLoggedIn(YAFTPResponse):
+    def __init__(self):
+        super().__init__(530, "Not logged in.")
+
 CODE_TO_RESPONSES = {
+    212: DirectoryStatus,
     230: UserLoggedIn,
-    430: InvalidUserNameOrPassword
+    430: InvalidUserNameOrPassword,
+    501: InvalidCommandOrArguments,
+    530: NotLoggedIn
 }
 
 class YAFTPResponseParser:

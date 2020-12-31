@@ -2,7 +2,7 @@ import logging
 import socket
 import asyncio
 from .yaftp_request import YAFTPRequestParser
-from .yaftp_response import YAFTPResponse
+from .yaftp_response import YAFTPResponse, InvalidCommandOrArguments
 from .yaftp_session import YAFTPSession
 from .exception import ParseRequestError
 
@@ -40,8 +40,11 @@ class YAFTPServer:
             if not request_string:
                 logging.debug(f'no more requests')
                 break
-            request = YAFTPRequestParser().parse(request_string)
-            response = request.execute(session)  # TODO: await this
+            try:
+                request = YAFTPRequestParser().parse(request_string)
+                response = request.execute(session)  # TODO: await this
+            except ParseRequestError:
+                response = InvalidCommandOrArguments()
             await self.loop.sock_sendall(client_socket, str(response).encode())
 
 
