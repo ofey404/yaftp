@@ -5,6 +5,24 @@ Weiwen Chen's fifth project of Computer Network course in FDU.
 
 ## Usage
 
+### Installation
+```bash
+git clone https://github.com/ofey404/yaftp.git
+cd yaftp
+pip install -e .
+```
+
+Then you can use `yaftp` package in python:
+
+```bash
+$ python
+Python 3.9.1 (default, Dec  8 2020, 00:00:00) 
+[GCC 10.2.1 20201125 (Red Hat 10.2.1-9)] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import yaftp
+>>> 
+```
+
 ### Set up a server
 ```python
 import yaftp

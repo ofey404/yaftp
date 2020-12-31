@@ -1,4 +1,3 @@
-from . import helpers
 from socket import socket, AF_INET, SOCK_STREAM
 from .yaftp_request import YAFTPRequest, YAFTPLogin, YAFTPPwd, YAFTPDir, YAFTPCd, YAFTPGet, YAFTPSend, YAFTPBye
 from .yaftp_response import YAFTPResponse, YAFTPResponseParser
