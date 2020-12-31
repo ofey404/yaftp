@@ -92,7 +92,7 @@ Use async event loop to handle control connection, while firing other threads to
     - `DATA_PORT`: same as above.
 - `BYE`
 
-## Only support active mode
+### Only support active mode
 Implemented a ftp-like active mode, because it's easy, without much synchronizaion effort.
 
 When sending or getting a file:
@@ -101,6 +101,13 @@ When sending or getting a file:
     - request specify the data port.
 - Server -- connect --> Client:data_port
     - then send file.
+
+### Vulnerabilities
+I've try my best on error handling and prevent secure vulnerabilitys, like:
+- Prevent user `dir` or `cd` beyond root directory.
+
+But I'm sure that's not enough, this library must be full of holes.
+
 
 ## Reference
 - https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes
