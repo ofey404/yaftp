@@ -14,7 +14,6 @@ class YAFTPServer:
         logging.basicConfig(format='%(process)d - [%(levelname)s] - %(asctime)s - %(message)s', datefmt='%y-%m-%d %H:%M:%S', level=logging.DEBUG)
         self.loop = asyncio.get_event_loop()
         self.server = None
-        self.data_socket = None
         self.auth = auth
 
     def serve(self):
@@ -35,7 +34,11 @@ class YAFTPServer:
 
     async def handler(self, client_socket, address):
         logging.debug(f'start handling, client: {client_socket}')
-        session = YAFTPSession(self.local_dir, self.auth)
+        session = YAFTPSession(
+            root_dir=self.local_dir,
+            authenticator=self.auth,
+            client_address = address
+            )
         while not session.ended:
             request_string = (await self.loop.sock_recv(client_socket, 1024)).decode()
             if not request_string:

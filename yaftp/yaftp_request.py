@@ -1,8 +1,11 @@
 from .exception import ParseRequestError, PathOverRootError
 from .yaftp_session import YAFTPSession
-from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus, FileUnAvailable, UserLoggedOut
+from .yaftp_response import YAFTPResponse, InvalidUserNameOrPassword, UserLoggedIn, NotLoggedIn, DirectoryStatus, FileUnAvailable, UserLoggedOut, FileStatus
 import logging
 import os
+from time import sleep
+import threading
+import socket
 
 class YAFTPRequest:
     def __init__(self, name, raw_args=None, accepted_argc=(0,)):
@@ -121,8 +124,49 @@ class YAFTPCd(YAFTPRequest):
             return FileUnAvailable(self.relative_path)
 
 class YAFTPGet(YAFTPRequest):
+    """Active Mode Only"""
     def __init__(self, raw_args=None):
-        super().__init__("GET", raw_args)
+        super().__init__("GET", raw_args, accepted_argc=(2,))
+        self.filename = raw_args[0]
+        self.client_hostname = None
+        self.client_dataport = None
+        try:
+            self.client_dataport = int(raw_args[1])
+        except ValueError:
+            raise ParseRequestError(f"can't parse client data port: {raw_args[1]}")
+
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+        if not self.check_login_and_log(session):
+            return NotLoggedIn()
+        self.client_hostname = session.client_address[0]
+
+        try:
+            path = self.to_local_path(session, self.filename)
+        except PathOverRootError:
+            return FileUnAvailable(self.filename)
+
+        if not os.path.isfile(path):
+            return FileUnAvailable(self.filename)
+
+        def send_file():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(10)
+                try:
+                    client_data_addr = (self.client_hostname, self.client_dataport)
+                    s.connect(client_data_addr)
+                except socket.timeout:
+                    return
+                with open(path, "rb") as f:
+                    l = f.read(1024)
+                    while l:
+                        s.send(l)
+                        l = f.read(1024)
+        
+        threading.Thread(
+            target=send_file
+        ).start()
+
+        return FileStatus(f"try sending file {self.filename} to {self.client_hostname}:{self.client_dataport}")
 
 class YAFTPSend(YAFTPRequest):
     def __init__(self, raw_args=None):

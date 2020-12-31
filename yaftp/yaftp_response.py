@@ -11,6 +11,11 @@ class DirectoryStatus(YAFTPResponse):
         super().__init__(212, "Directory status:\n")
         self.description += dir_status
 
+class FileStatus(YAFTPResponse):
+    def __init__(self, file_status=""):
+        super().__init__(213, "File status:\n")
+        self.description += file_status
+
 class UserLoggedIn(YAFTPResponse):
     def __init__(self):
         super().__init__(230, "User logged in, proceed. Logged out if appropriate.")
@@ -37,6 +42,7 @@ class NotLoggedIn(YAFTPResponse):
 
 CODE_TO_RESPONSES = {
     212: DirectoryStatus,
+    213: FileStatus,
     230: UserLoggedIn,
     231: UserLoggedOut,
     430: InvalidUserNameOrPassword,
