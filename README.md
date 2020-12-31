@@ -87,9 +87,9 @@ Use async event loop to handle control connection, while firing other threads to
 - `PWD`
 - `CD [RELATIVE_PATH]`
 - `GET FILENAME DATA_PORT`
-    - DATA_PORT should be opened in localhost before command is executed.
+    - `DATA_PORT` should be opened in localhost before command is executed.
 - `SEND FILENAME DATA_PORT`
-    - DATA_PORT: same as above.
+    - `DATA_PORT`: same as above.
 - `BYE`
 
 ## Only support active mode
