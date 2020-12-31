@@ -209,6 +209,26 @@ class YAFTPSend(YAFTPRequest):
 
         return FileStatus(f"try receiving file {self.filename} from {self.client_hostname}:{self.client_dataport}")
 
+class YAFTPDelete(YAFTPRequest):
+    def __init__(self, raw_args=()):
+        super().__init__("DELETE", raw_args=raw_args, accepted_argc=(1,))
+        self.filename = raw_args[0]
+
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+        if not self.check_login_and_log(session):
+            return NotLoggedIn()
+
+        try:
+            path = self.to_local_path(session, self.filename)
+        except PathOverRootError:
+            return FileUnAvailable(self.filename)
+
+        if not os.path.isfile(path):
+            return FileUnAvailable(self.filename)
+
+        os.remove(path)
+        return FileStatus(f"deleted file {self.filename}")
+
 class YAFTPBye(YAFTPRequest):
     def __init__(self, raw_args=()):
         super().__init__("BYE", raw_args, accepted_argc=(0,))
@@ -226,6 +246,7 @@ REQUESTS = {
     "CD": YAFTPCd,
     "GET": YAFTPGet,
     "SEND": YAFTPSend,
+    "DELETE": YAFTPDelete,
     "BYE": YAFTPBye
 }
 
