@@ -14,6 +14,7 @@ class YAFTPServer:
         logging.basicConfig(format='%(process)d - [%(levelname)s] - %(asctime)s - %(message)s', datefmt='%y-%m-%d %H:%M:%S', level=logging.DEBUG)
         self.loop = asyncio.get_event_loop()
         self.server = None
+        self.data_socket = None
         self.auth = auth
 
     def serve(self):
@@ -42,7 +43,7 @@ class YAFTPServer:
                 break
             try:
                 request = YAFTPRequestParser().parse(request_string)
-                response = request.execute(session)  # TODO: await this
+                response = await request.execute(session)  # TODO: await this
             except ParseRequestError:
                 response = InvalidCommandOrArguments()
             await self.loop.sock_sendall(client_socket, str(response).encode())

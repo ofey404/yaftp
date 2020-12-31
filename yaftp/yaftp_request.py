@@ -11,7 +11,7 @@ class YAFTPRequest:
         if len(raw_args) not in accepted_argc:
             raise ParseRequestError(f"wrong argument number: {len(raw_args)}")
 
-    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
         raise NotImplementedError
 
     def to_local_path(self, session: YAFTPSession, d: str = ".") -> str:
@@ -65,7 +65,7 @@ class YAFTPLogin(YAFTPRequest):
         else:
             raise ParseRequestError(f"can't parse {raw_args[0]} to valid auth info.")
     
-    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if (self.username not in session.auth.keys()) or (self.passwd != session.auth[self.username]):
             logging.info(f"invalid username or password: {self.username}:{self.passwd}")
             return InvalidUserNameOrPassword()
@@ -81,7 +81,7 @@ class YAFTPDir(YAFTPRequest):
         if len(raw_args) != 0:
             self.dir = raw_args[0]
     
-    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         try:
@@ -96,7 +96,7 @@ class YAFTPPwd(YAFTPRequest):
     def __init__(self, raw_args=None):
         super().__init__("PWD", raw_args, accepted_argc=(0,))
 
-    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         path = self.to_virtual_path(session)
@@ -110,7 +110,7 @@ class YAFTPCd(YAFTPRequest):
         if len(raw_args) == 1:
             self.relative_path = raw_args[0]
 
-    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         new_path = os.path.normpath(os.path.join(session.work_dir, self.relative_path))
@@ -132,11 +132,11 @@ class YAFTPBye(YAFTPRequest):
     def __init__(self, raw_args=None):
         super().__init__("BYE", raw_args, accepted_argc=(0,))
 
-    def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         session.ended = True
-        return UserLoggedOut
+        return UserLoggedOut()
 
 REQUESTS = {
     "LOGIN": YAFTPLogin,
