@@ -1,7 +1,7 @@
 # yaftp: Yet another file transfer protocol
-A simple ftp-like file transfer protocol package.
-
 Weiwen Chen's fifth project of Computer Network course in FDU.
+
+A simple ftp-like file transfer protocol package.
 
 ## Usage
 
@@ -75,6 +75,32 @@ c.dir()
 c.quit()
 # Out[10]: 231
 ```
+
+## Implementation detail
+Super simple, just a toy, never care about performance. 
+
+Use async event loop to handle control connection, while firing other threads to deal with data connection.
+
+### Commands
+- `LOGIN USER[:PASSWORD]`
+- `DIR [RELATIVE_PATH]`
+- `PWD`
+- `CD [RELATIVE_PATH]`
+- `GET FILENAME DATA_PORT`
+    - DATA_PORT should be opened in localhost before command is executed.
+- `SEND FILENAME DATA_PORT`
+    - DATA_PORT: same as above.
+- `BYE`
+
+## Only support active mode
+Implemented a ftp-like active mode, because it's easy, without much synchronizaion effort.
+
+When sending or getting a file:
+- Client open a local data port, listening.
+- Client -- request --> Server
+    - request specify the data port.
+- Server -- connect --> Client:data_port
+    - then send file.
 
 ## Reference
 - https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes
