@@ -37,4 +37,8 @@ def local_to_virtual_abs(local_path, root_dir):
     if not is_subpath(root_dir, local_path):
         raise PathOverRootError(local_path)
     local_path = os.path.abspath(local_path)
-    return "/" + remove_prefix(local_path, root_dir)
+    removed = remove_prefix(local_path, root_dir)
+    if removed == "":
+        return "/"
+    else:
+        return removed

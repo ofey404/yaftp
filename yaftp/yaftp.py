@@ -31,8 +31,11 @@ class YAFTP:
     def pwd(self) -> str:
         return self.send_request(YAFTPPwd()).split("\n", 1)[1]
 
-    def cd(self, path=".") -> int:
-        return self.get_code(self.send_request(YAFTPCd([path])))
+    def cd(self, path=None) -> int:
+        if path is None:
+            return self.get_code(self.send_request(YAFTPCd()))
+        else:
+            return self.get_code(self.send_request(YAFTPCd([path])))
 
     def dir(self, directory: str = ".") -> [str]:
         return self.send_request(YAFTPDir([directory])).split("\n")[1:]
