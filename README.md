@@ -92,6 +92,7 @@ Use async event loop to handle control connection, while firing other threads to
     - `DATA_PORT` should be opened in localhost before command is executed.
 - `SEND FILENAME DATA_PORT`
     - `DATA_PORT`: same as above.
+- `DELETE FILENAME`
 - `BYE`
 
 ### Only support active mode
