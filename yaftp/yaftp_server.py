@@ -39,6 +39,7 @@ class YAFTPServer:
             authenticator=self.auth,
             client_address = address
             )
+        # TODO: set a timeout.
         while not session.ended:
             request_string = (await self.loop.sock_recv(client_socket, 1024)).decode()
             if not request_string:
@@ -46,7 +47,7 @@ class YAFTPServer:
                 break
             try:
                 request = YAFTPRequestParser().parse(request_string)
-                response = await request.execute(session)  # TODO: await this
+                response = request.execute(session)  # TODO: await this
             except ParseRequestError:
                 response = InvalidCommandOrArguments()
             await self.loop.sock_sendall(client_socket, str(response).encode())

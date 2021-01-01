@@ -1,5 +1,5 @@
 from socket import socket, AF_INET, SOCK_STREAM
-from .yaftp_request import YAFTPRequest, YAFTPLogin, YAFTPPwd, YAFTPDir, YAFTPCd, YAFTPGet, YAFTPSend, YAFTPBye
+from .yaftp_request import YAFTPRequest, YAFTPLogin, YAFTPPwd, YAFTPDir, YAFTPCd, YAFTPGet, YAFTPSend, YAFTPBye, YAFTPDelete
 from .yaftp_response import YAFTPResponse, YAFTPResponseParser
 import threading
 
@@ -76,6 +76,9 @@ class YAFTP:
         threading.Thread(target=get_file).start()
         response = self.send_request(YAFTPGet([name, str(dataport)]))
         return self.get_code(response)
+
+    def delete(self, name) -> int:
+        return self.get_code(self.send_request(YAFTPDelete([name])))
 
     def quit(self) -> int:
         response = self.send_request(YAFTPBye())

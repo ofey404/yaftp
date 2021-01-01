@@ -6,6 +6,7 @@ import os
 from time import sleep
 import threading
 import socket
+from .virtual_path import VirtualPath, local_to_virtual_abs 
 
 class YAFTPRequest:
     def __init__(self, name, raw_args=(), accepted_argc=(0,)):
@@ -14,39 +15,15 @@ class YAFTPRequest:
         if len(raw_args) not in accepted_argc:
             raise ParseRequestError(f"wrong argument number: {len(raw_args)}")
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         raise NotImplementedError
-
-    def to_local_path(self, session: YAFTPSession, d: str = ".") -> str:
-        def is_subpath(root, sub):
-            root = os.path.abspath(root)
-            sub = os.path.abspath(sub)
-            return sub.startswith(root)
-            
-        path = os.path.join(session.root_dir, session.work_dir, d)
-        if is_subpath(session.root_dir, path):
-            return os.path.normpath(path)
-        else:
-            raise PathOverRootError(path)
-
-    def to_virtual_path(self, session: YAFTPSession, d: str = ".") -> str:
-        root = os.path.abspath(session.root_dir)
-        local_path = os.path.abspath(self.to_local_path(session, d))  # have checked - is subpath of root path
-        def remove_prefix(string, prefix):
-            if string.startswith(prefix):
-                return string[len(prefix):]
-        removed = remove_prefix(local_path, root)
-        if removed == "":   # FIXIT: a corner case. Refactor the path management part to clarify this
-            return "/"
-        else:
-            return os.path.normpath(removed)
 
     def check_login_and_log(self, session: YAFTPSession):
         if not session.login:
             logging.info(f"try `{self}` without login")
             return False
         else:
-            logging.info(f"execute `{self}` on {self.to_local_path(session, session.work_dir)}")
+            logging.info(f"execute `{self}`, work dir: {session.work_dir}, root dir: {session.root_dir}")
             return True
 
     def __str__(self):
@@ -68,7 +45,7 @@ class YAFTPLogin(YAFTPRequest):
         else:
             raise ParseRequestError(f"can't parse {raw_args[0]} to valid auth info.")
     
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if (self.username not in session.auth.keys()) or (self.passwd != session.auth[self.username]):
             logging.info(f"invalid username or password: {self.username}:{self.passwd}")
             return InvalidUserNameOrPassword()
@@ -80,17 +57,18 @@ class YAFTPLogin(YAFTPRequest):
 class YAFTPDir(YAFTPRequest):
     def __init__(self, raw_args=()):
         super().__init__("DIR", raw_args, accepted_argc=(0, 1))
-        self.dir = "."
+        self.dir = VirtualPath('.')
         if len(raw_args) != 0:
-            self.dir = raw_args[0]
+            self.dir = VirtualPath(raw_args[0])
     
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         try:
-            path = self.to_local_path(session, self.dir)
+            path = self.dir.to_local_path(session.work_dir, session.root_dir)
         except PathOverRootError:
             return FileUnAvailable(self.dir)
+        logging.debug(f"try to dir in {path}")
         _, dirs, filenames = next(os.walk(path))
         dirs = list(map(lambda x: x + "/", dirs))
         return DirectoryStatus(dir_status="\n".join(dirs + filenames))
@@ -99,35 +77,36 @@ class YAFTPPwd(YAFTPRequest):
     def __init__(self, raw_args=()):
         super().__init__("PWD", raw_args, accepted_argc=(0,))
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
-        path = self.to_virtual_path(session)
+        path = local_to_virtual_abs(session.work_dir, session.root_dir)
         return DirectoryStatus(dir_status=path)
 
 class YAFTPCd(YAFTPRequest):
-    """Only support relative path"""
     def __init__(self, raw_args=()):
         super().__init__("CD", raw_args, accepted_argc=(0, 1))
-        self.relative_path = "."
+        self.virtpath = VirtualPath("/")
         if len(raw_args) == 1:
-            self.relative_path = raw_args[0]
+            self.virtpath = VirtualPath(raw_args[0])
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
-        new_path = os.path.normpath(os.path.join(session.work_dir, self.relative_path))
+
+        new_path = self.virtpath.to_local_path(session.work_dir, session.root_dir)
         session.work_dir = new_path
+        logging.debug(f"try to switch to {new_path}")
         try:
-            return DirectoryStatus(self.to_virtual_path(session))
+            return DirectoryStatus(str(self.virtpath))
         except PathOverRootError:
-            return FileUnAvailable(self.relative_path)
+            return FileUnAvailable(str(self.virtpath))
 
 class YAFTPGet(YAFTPRequest):
     """Active Mode Only"""
     def __init__(self, raw_args=()):
         super().__init__("GET", raw_args, accepted_argc=(2,))
-        self.filename = raw_args[0]
+        self.filepath = VirtualPath(raw_args[0])
         self.client_hostname = None
         self.client_dataport = None
         try:
@@ -135,18 +114,18 @@ class YAFTPGet(YAFTPRequest):
         except ValueError:
             raise ParseRequestError(f"can't parse client data port: {raw_args[1]}")
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         self.client_hostname = session.client_address[0]
 
         try:
-            path = self.to_local_path(session, self.filename)
+            path = self.filepath.to_local_path(session.work_dir, session.root_dir)
         except PathOverRootError:
-            return FileUnAvailable(self.filename)
+            return FileUnAvailable(str(self.filepath))
 
         if not os.path.isfile(path):
-            return FileUnAvailable(self.filename)
+            return FileUnAvailable(str(self.filepath))
 
         def send_file_to_client():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -166,12 +145,12 @@ class YAFTPGet(YAFTPRequest):
             target=send_file_to_client
         ).start()
 
-        return FileStatus(f"try sending file {self.filename} to {self.client_hostname}:{self.client_dataport}")
+        return FileStatus(f"try sending file {str(self.filepath)} to {self.client_hostname}:{self.client_dataport}")
 
 class YAFTPSend(YAFTPRequest):
     def __init__(self, raw_args=()):
         super().__init__("SEND", raw_args, accepted_argc=(2,))
-        self.filename = raw_args[0]
+        self.filepath = VirtualPath(raw_args[0])
         self.client_hostname = None
         self.client_dataport = None
         try:
@@ -179,15 +158,15 @@ class YAFTPSend(YAFTPRequest):
         except ValueError:
             raise ParseRequestError(f"can't parse client data port: {raw_args[1]}")
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         self.client_hostname = session.client_address[0]
 
         try:
-            path = self.to_local_path(session, self.filename)
+            path = self.filepath.to_local_path(session.work_dir, session.root_dir)
         except PathOverRootError:
-            return FileUnAvailable(self.filename)
+            return FileUnAvailable(self.filepath)
 
         def receive_file_from_client():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -207,33 +186,33 @@ class YAFTPSend(YAFTPRequest):
             target=receive_file_from_client
         ).start()
 
-        return FileStatus(f"try receiving file {self.filename} from {self.client_hostname}:{self.client_dataport}")
+        return FileStatus(f"try receiving file {str(self.filepath)} from {self.client_hostname}:{self.client_dataport}")
 
 class YAFTPDelete(YAFTPRequest):
     def __init__(self, raw_args=()):
         super().__init__("DELETE", raw_args=raw_args, accepted_argc=(1,))
-        self.filename = raw_args[0]
+        self.filepath = VirtualPath(raw_args[0])
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
 
         try:
-            path = self.to_local_path(session, self.filename)
+            path = self.filepath.to_local_path(session.work_dir, session.root_dir)
         except PathOverRootError:
-            return FileUnAvailable(self.filename)
+            return FileUnAvailable(self.filepath)
 
         if not os.path.isfile(path):
-            return FileUnAvailable(self.filename)
+            return FileUnAvailable(self.filepath)
 
         os.remove(path)
-        return FileStatus(f"deleted file {self.filename}")
+        return FileStatus(f"deleted file {str(self.filepath)}")
 
 class YAFTPBye(YAFTPRequest):
     def __init__(self, raw_args=()):
         super().__init__("BYE", raw_args, accepted_argc=(0,))
 
-    async def execute(self, session: YAFTPSession) -> YAFTPResponse:
+    def execute(self, session: YAFTPSession) -> YAFTPResponse:
         if not self.check_login_and_log(session):
             return NotLoggedIn()
         session.ended = True

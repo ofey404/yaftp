@@ -14,7 +14,7 @@ setup(
     long_description=readme,
     author='Weiwen Chen',
     author_email='17307110121@fudan.edu.cn',
-    url='',
+    url='https://github.com/ofey404/yaftp',
     license=license,
     packages=find_packages(exclude=('tests', 'docs'))
 )
