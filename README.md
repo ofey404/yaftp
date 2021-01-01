@@ -3,6 +3,8 @@ Weiwen Chen's fifth project of Computer Network course in FDU.
 
 A simple ftp-like file transfer protocol package.
 
+Simple ui: https://github.com/ofey404/yaftp-ui
+
 ## Usage
 
 ### Installation
